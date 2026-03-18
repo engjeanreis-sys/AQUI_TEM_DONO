@@ -1,0 +1,884 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <link rel="stylesheet" href="css/leaflet.css">
+        <link rel="stylesheet" href="css/L.Control.Layers.Tree.css">
+        <link rel="stylesheet" href="css/qgis2web.css">
+        <link rel="stylesheet" href="css/fontawesome-all.min.css">
+        <link rel="stylesheet" href="css/filter.css">
+<link rel="stylesheet" href="css/nouislider.min.css">
+        <link rel="stylesheet" href="css/leaflet.photon.css">
+        <style>
+        html, body, #map {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        </style>
+        <title></title>
+    </head>
+    <body>
+        <div id="map">
+        </div>
+        <script src="js/qgis2web_expressions.js"></script>
+        <script src="js/leaflet.js"></script>
+        <script src="js/L.Control.Layers.Tree.min.js"></script>
+        <script src="js/leaflet.rotatedMarker.js"></script>
+        <script src="js/leaflet.pattern.js"></script>
+        <script src="js/leaflet-hash.js"></script>
+        <script src="js/Autolinker.min.js"></script>
+        <script src="js/rbush.min.js"></script>
+        <script src="js/labelgun.min.js"></script>
+        <script src="js/labels.js"></script>
+        <script src="js/leaflet.photon.js"></script>
+        <script src="js/tailDT.js"></script>
+<script src="js/nouislider.min.js"></script>
+<script src="js/wNumb.js"></script>
+        <script src="data/PoligonosParanCODESAIMA_1.js"></script>
+        <script src="data/PoligonalParanLotesFora_2.js"></script>
+        <script src="data/GlebaCauam_3.js"></script>
+        <script src="data/readeRenncia_4.js"></script>
+        <script>
+        var highlightLayer;
+        function highlightFeature(e) {
+            highlightLayer = e.target;
+            highlightLayer.openPopup();
+        }
+        var map = L.map('map', {
+            zoomControl:false, maxZoom:28, minZoom:1
+        }).fitBounds([[2.8212809220331363,-60.74597994550341],[2.8270605518068006,-60.73927348541945]]);
+        var hash = new L.Hash(map);
+        map.attributionControl.setPrefix('<a href="https://github.com/tomchadwin/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
+        var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
+        // remove popup's row if "visible-with-data"
+        function removeEmptyRowsFromPopupContent(content, feature) {
+         var tempDiv = document.createElement('div');
+         tempDiv.innerHTML = content;
+         var rows = tempDiv.querySelectorAll('tr');
+         for (var i = 0; i < rows.length; i++) {
+             var td = rows[i].querySelector('td.visible-with-data');
+             var key = td ? td.id : '';
+             if (td && td.classList.contains('visible-with-data') && feature.properties[key] == null) {
+                 rows[i].parentNode.removeChild(rows[i]);
+             }
+         }
+         return tempDiv.innerHTML;
+        }
+        // modify popup if contains media
+        function addClassToPopupIfMedia(content, popup) {
+            var tempDiv = document.createElement('div');
+            tempDiv.innerHTML = content;
+            var imgTd = tempDiv.querySelector('td img');
+            if (imgTd) {
+                var src = imgTd.getAttribute('src');
+                if (/\.(jpg|jpeg|png|gif|bmp|webp|avif)$/i.test(src)) {
+                    popup._contentNode.classList.add('media');
+                    setTimeout(function() {
+                        popup.update();
+                    }, 10);
+                } else if (/\.(mp3|wav|ogg|aac)$/i.test(src)) {
+                    var audio = document.createElement('audio');
+                    audio.controls = true;
+                    audio.src = src;
+                    imgTd.parentNode.replaceChild(audio, imgTd);
+                    popup._contentNode.classList.add('media');
+                    setTimeout(function() {
+                        popup.setContent(tempDiv.innerHTML);
+                        popup.update();
+                    }, 10);
+                } else if (/\.(mp4|webm|ogg|mov)$/i.test(src)) {
+                    var video = document.createElement('video');
+                    video.controls = true;
+                    video.src = src;
+                    video.style.width = "400px";
+                    video.style.height = "300px";
+                    video.style.maxHeight = "60vh";
+                    video.style.maxWidth = "60vw";
+                    imgTd.parentNode.replaceChild(video, imgTd);
+                    popup._contentNode.classList.add('media');
+                    // Aggiorna il popup quando il video carica i metadati
+                    video.addEventListener('loadedmetadata', function() {
+                        popup.update();
+                    });
+                    setTimeout(function() {
+                        popup.setContent(tempDiv.innerHTML);
+                        popup.update();
+                    }, 10);
+                } else {
+                    popup._contentNode.classList.remove('media');
+                }
+            } else {
+                popup._contentNode.classList.remove('media');
+            }
+        }
+        var zoomControl = L.control.zoom({
+            position: 'topleft'
+        }).addTo(map);
+        var bounds_group = new L.featureGroup([]);
+        function setBounds() {
+        }
+        map.createPane('pane_GoogleSatellite_0');
+        map.getPane('pane_GoogleSatellite_0').style.zIndex = 400;
+        var layer_GoogleSatellite_0 = L.tileLayer('http://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+            pane: 'pane_GoogleSatellite_0',
+            opacity: 1.0,
+            attribution: '',
+            minZoom: 1,
+            maxZoom: 28,
+            minNativeZoom: 0,
+            maxNativeZoom: 22
+        });
+        layer_GoogleSatellite_0;
+        map.addLayer(layer_GoogleSatellite_0);
+        function pop_PoligonosParanCODESAIMA_1(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    if (typeof layer.closePopup == 'function') {
+                        layer.closePopup();
+                    } else {
+                        layer.eachLayer(function(feature){
+                            feature.closePopup()
+                        });
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['ID_LOTE'] !== null ? autolinker.link(String(feature.properties['ID_LOTE']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['LOTE'] !== null ? autolinker.link(String(feature.properties['LOTE']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['QUADRA'] !== null ? autolinker.link(String(feature.properties['QUADRA']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['NOME'] !== null ? autolinker.link(String(feature.properties['NOME']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['ENDEREÇO'] !== null ? autolinker.link(String(feature.properties['ENDEREÇO']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Nº'] !== null ? autolinker.link(String(feature.properties['Nº']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['BAIRRO'] !== null ? autolinker.link(String(feature.properties['BAIRRO']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['CPF'] !== null ? autolinker.link(String(feature.properties['CPF']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['SITUACAO'] !== null ? autolinker.link(String(feature.properties['SITUACAO']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Tabela de Atributos 01_LOTE'] !== null ? autolinker.link(String(feature.properties['Tabela de Atributos 01_LOTE']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Tabela de Atributos 01_QUADRA'] !== null ? autolinker.link(String(feature.properties['Tabela de Atributos 01_QUADRA']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Tabela de Atributos 01_NOME'] !== null ? autolinker.link(String(feature.properties['Tabela de Atributos 01_NOME']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Tabela de Atributos 01_CPF'] !== null ? autolinker.link(String(feature.properties['Tabela de Atributos 01_CPF']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Tabela de Atributos 01_ENDERE�O'] !== null ? autolinker.link(String(feature.properties['Tabela de Atributos 01_ENDERE�O']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Tabela de Atributos 01_N'] !== null ? autolinker.link(String(feature.properties['Tabela de Atributos 01_N']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Tabela de Atributos 01_BAIRRO'] !== null ? autolinker.link(String(feature.properties['Tabela de Atributos 01_BAIRRO']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_PoligonosParanCODESAIMA_1_0(feature) {
+            switch(String(feature.properties['SITUACAO'])) {
+                case 'ENTREGUE':
+                    return {
+                pane: 'pane_PoligonosParanCODESAIMA_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(35,227,28,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'NAO ENTREGUE':
+                    return {
+                pane: 'pane_PoligonosParanCODESAIMA_1',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(150,150,150,1.0)',
+                interactive: true,
+            }
+                    break;
+                default:
+                    return {
+                pane: 'pane_PoligonosParanCODESAIMA_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,255,255,1.0)',
+                interactive: true,
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_PoligonosParanCODESAIMA_1');
+        map.getPane('pane_PoligonosParanCODESAIMA_1').style.zIndex = 401;
+        map.getPane('pane_PoligonosParanCODESAIMA_1').style['mix-blend-mode'] = 'normal';
+        var layer_PoligonosParanCODESAIMA_1 = new L.geoJson(json_PoligonosParanCODESAIMA_1, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_PoligonosParanCODESAIMA_1',
+            layerName: 'layer_PoligonosParanCODESAIMA_1',
+            pane: 'pane_PoligonosParanCODESAIMA_1',
+            onEachFeature: pop_PoligonosParanCODESAIMA_1,
+            style: style_PoligonosParanCODESAIMA_1_0,
+        });
+        bounds_group.addLayer(layer_PoligonosParanCODESAIMA_1);
+        map.addLayer(layer_PoligonosParanCODESAIMA_1);
+        function pop_PoligonalParanLotesFora_2(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    if (typeof layer.closePopup == 'function') {
+                        layer.closePopup();
+                    } else {
+                        layer.eachLayer(function(feature){
+                            feature.closePopup()
+                        });
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+        }
+
+        function style_PoligonalParanLotesFora_2_0() {
+            return {
+                pane: 'pane_PoligonalParanLotesFora_2',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(227,26,28,0.6588235294117647)',
+                interactive: true,
+            }
+        }
+        map.createPane('pane_PoligonalParanLotesFora_2');
+        map.getPane('pane_PoligonalParanLotesFora_2').style.zIndex = 402;
+        map.getPane('pane_PoligonalParanLotesFora_2').style['mix-blend-mode'] = 'normal';
+        var layer_PoligonalParanLotesFora_2 = new L.geoJson(json_PoligonalParanLotesFora_2, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_PoligonalParanLotesFora_2',
+            layerName: 'layer_PoligonalParanLotesFora_2',
+            pane: 'pane_PoligonalParanLotesFora_2',
+            onEachFeature: pop_PoligonalParanLotesFora_2,
+            style: style_PoligonalParanLotesFora_2_0,
+        });
+        bounds_group.addLayer(layer_PoligonalParanLotesFora_2);
+        map.addLayer(layer_PoligonalParanLotesFora_2);
+        function pop_GlebaCauam_3(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    if (typeof layer.closePopup == 'function') {
+                        layer.closePopup();
+                    } else {
+                        layer.eachLayer(function(feature){
+                            feature.closePopup()
+                        });
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['id'] !== null ? autolinker.link(String(feature.properties['id']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Nome'] !== null ? autolinker.link(String(feature.properties['Nome']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_GlebaCauam_3_0() {
+            return {
+                pane: 'pane_GlebaCauam_3',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(92,199,229,0.6823529411764706)',
+                interactive: true,
+            }
+        }
+        map.createPane('pane_GlebaCauam_3');
+        map.getPane('pane_GlebaCauam_3').style.zIndex = 403;
+        map.getPane('pane_GlebaCauam_3').style['mix-blend-mode'] = 'normal';
+        var layer_GlebaCauam_3 = new L.geoJson(json_GlebaCauam_3, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_GlebaCauam_3',
+            layerName: 'layer_GlebaCauam_3',
+            pane: 'pane_GlebaCauam_3',
+            onEachFeature: pop_GlebaCauam_3,
+            style: style_GlebaCauam_3_0,
+        });
+        bounds_group.addLayer(layer_GlebaCauam_3);
+        map.addLayer(layer_GlebaCauam_3);
+        function pop_readeRenncia_4(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    if (typeof layer.closePopup == 'function') {
+                        layer.closePopup();
+                    } else {
+                        layer.eachLayer(function(feature){
+                            feature.closePopup()
+                        });
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['id'] !== null ? autolinker.link(String(feature.properties['id']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['NOME'] !== null ? autolinker.link(String(feature.properties['NOME']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_readeRenncia_4_0() {
+            return {
+                pane: 'pane_readeRenncia_4',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(133,182,111,0.5803921568627451)',
+                interactive: true,
+            }
+        }
+        map.createPane('pane_readeRenncia_4');
+        map.getPane('pane_readeRenncia_4').style.zIndex = 404;
+        map.getPane('pane_readeRenncia_4').style['mix-blend-mode'] = 'normal';
+        var layer_readeRenncia_4 = new L.geoJson(json_readeRenncia_4, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_readeRenncia_4',
+            layerName: 'layer_readeRenncia_4',
+            pane: 'pane_readeRenncia_4',
+            onEachFeature: pop_readeRenncia_4,
+            style: style_readeRenncia_4_0,
+        });
+        bounds_group.addLayer(layer_readeRenncia_4);
+        map.addLayer(layer_readeRenncia_4);
+        setBounds();
+        var i = 0;
+        layer_GlebaCauam_3.eachLayer(function(layer) {
+            var context = {
+                feature: layer.feature,
+                variables: {}
+            };
+            layer.bindTooltip((layer.feature.properties['Nome'] !== null?String('<div style="color: #323232; font-size: 10pt; font-family: \'Arial\', sans-serif;">' + layer.feature.properties['Nome']) + '</div>':''), {permanent: true, offset: [-0, -16], className: 'css_GlebaCauam_3'});
+            labels.push(layer);
+            totalMarkers += 1;
+              layer.added = true;
+              addLabel(layer, i);
+              i++;
+        });
+        var i = 0;
+        layer_readeRenncia_4.eachLayer(function(layer) {
+            var context = {
+                feature: layer.feature,
+                variables: {}
+            };
+            layer.bindTooltip((layer.feature.properties['NOME'] !== null?String('<div style="color: #323232; font-size: 10pt; font-family: \'Arial\', sans-serif;">' + layer.feature.properties['NOME']) + '</div>':''), {permanent: true, offset: [-0, -16], className: 'css_readeRenncia_4'});
+            labels.push(layer);
+            totalMarkers += 1;
+              layer.added = true;
+              addLabel(layer, i);
+              i++;
+        });
+        var mapDiv = document.getElementById('map');
+        var row = document.createElement('div');
+        row.className="row";
+        row.id="all";
+        row.style.height = "100%";
+        var col1 = document.createElement('div');
+        col1.className="col9";
+        col1.id = "mapWindow";
+        col1.style.height = "99%";
+        col1.style.width = "80%";
+        col1.style.display = "inline-block";
+        var col2 = document.createElement('div');
+        col2.className="col3";
+        col2.id = "menu";
+        col2.style.display = "inline-block";
+        mapDiv.parentNode.insertBefore(row, mapDiv);
+        document.getElementById("all").appendChild(col1);
+        document.getElementById("all").appendChild(col2);
+        col1.appendChild(mapDiv)
+        var Filters = {"Tabela de Atributos 01_QUADRA": "str","Tabela de Atributos 01_CPF": "str","ENDEREÇO": "str","Nome": "str","Tabela de Atributos 01_NOME": "str"};
+        function filterFunc() {
+          map.eachLayer(function(lyr){
+          if ("options" in lyr && "dataVar" in lyr["options"]){
+            features = this[lyr["options"]["dataVar"]].features.slice(0);
+            try{
+              for (key in Filters){
+                keyS = key.replace(/[^a-zA-Z0-9_]/g, "")
+                if (Filters[key] == "str" || Filters[key] == "bool"){
+                  var selection = [];
+                  var options = document.getElementById("sel_" + keyS).options
+                  for (var i=0; i < options.length; i++) {
+                    if (options[i].selected) selection.push(options[i].value);
+                  }
+                    try{
+                      if (key in features[0].properties){
+                        for (i = features.length - 1;
+                          i >= 0; --i){
+                          if (selection.indexOf(
+                          features[i].properties[key])<0
+                          && selection.length>0) {
+                          features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                  }
+                }
+                if (Filters[key] == "int"){
+                  sliderVals =  document.getElementById(
+                    "div_" + keyS).noUiSlider.get();
+                  try{
+                    if (key in features[0].properties){
+                    for (i = features.length - 1; i >= 0; --i){
+                      if (parseInt(features[i].properties[key])
+                          < sliderVals[0]
+                          || parseInt(features[i].properties[key])
+                          > sliderVals[1]){
+                            features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                    }
+                  }
+                if (Filters[key] == "real"){
+                  sliderVals =  document.getElementById(
+                    "div_" + keyS).noUiSlider.get();
+                  try{
+                    if (key in features[0].properties){
+                    for (i = features.length - 1; i >= 0; --i){
+                      if (features[i].properties[key]
+                          < sliderVals[0]
+                          || features[i].properties[key]
+                          > sliderVals[1]){
+                            features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                    }
+                  }
+                if (Filters[key] == "date"
+                  || Filters[key] == "datetime"
+                  || Filters[key] == "time"){
+                  try{
+                    if (key in features[0].properties){
+                      HTMLkey = key.replace(/[&\/\\#,+()$~%.'":*?<>{} ]/g, '');
+                      startdate = document.getElementById("dat_" +
+                        HTMLkey + "_date1").value.replace(" ", "T");
+                      enddate = document.getElementById("dat_" +
+                        HTMLkey + "_date2").value.replace(" ", "T");
+                      for (i = features.length - 1; i >= 0; --i){
+                        if (features[i].properties[key] < startdate
+                          || features[i].properties[key] > enddate){
+                          features.splice(i,1);
+                        }
+                      }
+                    }
+                  } catch(err){
+                  }
+                }
+              }
+            } catch(err){
+            }
+          this[lyr["options"]["layerName"]].clearLayers();
+          this[lyr["options"]["layerName"]].addData(features);
+        var i = 0;
+        layer_GlebaCauam_3.eachLayer(function(layer) {
+            var context = {
+                feature: layer.feature,
+                variables: {}
+            };
+            layer.bindTooltip((layer.feature.properties['Nome'] !== null?String('<div style="color: #323232; font-size: 10pt; font-family: \'Arial\', sans-serif;">' + layer.feature.properties['Nome']) + '</div>':''), {permanent: true, offset: [-0, -16], className: 'css_GlebaCauam_3'});
+            labels.push(layer);
+            totalMarkers += 1;
+              layer.added = true;
+              addLabel(layer, i);
+              i++;
+        });
+        var i = 0;
+        layer_readeRenncia_4.eachLayer(function(layer) {
+            var context = {
+                feature: layer.feature,
+                variables: {}
+            };
+            layer.bindTooltip((layer.feature.properties['NOME'] !== null?String('<div style="color: #323232; font-size: 10pt; font-family: \'Arial\', sans-serif;">' + layer.feature.properties['NOME']) + '</div>':''), {permanent: true, offset: [-0, -16], className: 'css_readeRenncia_4'});
+            labels.push(layer);
+            totalMarkers += 1;
+              layer.added = true;
+              addLabel(layer, i);
+              i++;
+        });
+          }
+          })
+        }
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_TabeladeAtributos01_QUADRA = document.createElement('div');
+            div_TabeladeAtributos01_QUADRA.id = "div_TabeladeAtributos01_QUADRA";
+            div_TabeladeAtributos01_QUADRA.className= "filterselect";
+            document.getElementById("menu").appendChild(div_TabeladeAtributos01_QUADRA);
+            sel_TabeladeAtributos01_QUADRA = document.createElement('select');
+            sel_TabeladeAtributos01_QUADRA.multiple = true;
+            sel_TabeladeAtributos01_QUADRA.size = 8;
+            sel_TabeladeAtributos01_QUADRA.id = "sel_TabeladeAtributos01_QUADRA";
+            var TabeladeAtributos01_QUADRA_options_str = "<option value='' unselected></option>";
+            sel_TabeladeAtributos01_QUADRA.onchange = function(){filterFunc()};
+            TabeladeAtributos01_QUADRA_options_str  += '<option value="56">56</option>';
+            TabeladeAtributos01_QUADRA_options_str  += '<option value="59">59</option>';
+            TabeladeAtributos01_QUADRA_options_str  += '<option value="60">60</option>';
+            TabeladeAtributos01_QUADRA_options_str  += '<option value="64">64</option>';
+            TabeladeAtributos01_QUADRA_options_str  += '<option value="65">65</option>';
+            TabeladeAtributos01_QUADRA_options_str  += '<option value="66">66</option>';
+            TabeladeAtributos01_QUADRA_options_str  += '<option value="67">67</option>';
+            TabeladeAtributos01_QUADRA_options_str  += '<option value="79">79</option>';
+            sel_TabeladeAtributos01_QUADRA.innerHTML = TabeladeAtributos01_QUADRA_options_str;
+            div_TabeladeAtributos01_QUADRA.appendChild(sel_TabeladeAtributos01_QUADRA);
+            var lab_TabeladeAtributos01_QUADRA = document.createElement('div');
+            lab_TabeladeAtributos01_QUADRA.innerHTML = 'Tabela de Atributos 01_QUADRA';
+            lab_TabeladeAtributos01_QUADRA.className = 'filterlabel';
+            div_TabeladeAtributos01_QUADRA.appendChild(lab_TabeladeAtributos01_QUADRA);
+            var reset_TabeladeAtributos01_QUADRA = document.createElement('div');
+            reset_TabeladeAtributos01_QUADRA.innerHTML = 'clear filter';
+            reset_TabeladeAtributos01_QUADRA.className = 'filterlabel';
+            reset_TabeladeAtributos01_QUADRA.onclick = function() {
+                var options = document.getElementById("sel_TabeladeAtributos01_QUADRA").options;
+                for (var i=0; i < options.length; i++) {
+                    options[i].selected = false;
+                }
+                filterFunc();
+            };
+            div_TabeladeAtributos01_QUADRA.appendChild(reset_TabeladeAtributos01_QUADRA);
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_TabeladeAtributos01_CPF = document.createElement('div');
+            div_TabeladeAtributos01_CPF.id = "div_TabeladeAtributos01_CPF";
+            div_TabeladeAtributos01_CPF.className= "filterselect";
+            document.getElementById("menu").appendChild(div_TabeladeAtributos01_CPF);
+            sel_TabeladeAtributos01_CPF = document.createElement('select');
+            sel_TabeladeAtributos01_CPF.multiple = true;
+            sel_TabeladeAtributos01_CPF.size = 10;
+            sel_TabeladeAtributos01_CPF.id = "sel_TabeladeAtributos01_CPF";
+            var TabeladeAtributos01_CPF_options_str = "<option value='' unselected></option>";
+            sel_TabeladeAtributos01_CPF.onchange = function(){filterFunc()};
+            TabeladeAtributos01_CPF_options_str  += '<option value="014.341.902-18">014.341.902-18</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="028.308.884-21">028.308.884-21</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="029.916.554-02">029.916.554-02</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="040.793.118-00">040.793.118-00</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="041.541.772-49">041.541.772-49</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="057.055.332-68">057.055.332-68</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="074.852.802-44">074.852.802-44</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="076.231.483-46">076.231.483-46</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="112.264.982-72">112.264.982-72</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="123.604.571-68">123.604.571-68</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="130.326.232-00">130.326.232-00</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="144.466.502-20">144.466.502-20</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="149.988.312-91">149.988.312-91</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="153.920.902-49">153.920.902-49</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="180.488.703-04">180.488.703-04</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="181.092.844-34">181.092.844-34</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="187.692.171-49">187.692.171-49</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="187.893.581-04">187.893.581-04</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="199.637.932-15">199.637.932-15</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="201.275.532-15">201.275.532-15</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="225.363.882-04">225.363.882-04</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="225.689.212-34">225.689.212-34</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="241.604.232-72">241.604.232-72</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="257.529.872-53">257.529.872-53</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="269.022.574-34">269.022.574-34</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="376.017.502-30">376.017.502-30</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="381.894.882-87">381.894.882-87</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="381.896.402-59">381.896.402-59</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="382.183.852-68">382.183.852-68</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="382.405.302-06">382.405.302-06</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="383.232.222-15">383.232.222-15</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="384.979.133-53">384.979.133-53</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="463.911.422-20">463.911.422-20</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="488.273.803-10">488.273.803-10</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="508.295.482-20">508.295.482-20</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="510.787.912-87">510.787.912-87</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="511.784.932-72">511.784.932-72</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="515.718.972-91">515.718.972-91</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="518.434.712-72">518.434.712-72</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="580.500.352-04">580.500.352-04</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="590.014.702-97">590.014.702-97</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="592.056.612-04">592.056.612-04</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="595.098.134-00">595.098.134-00</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="604.956.347-04">604.956.347-04</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="606.031.002-87">606.031.002-87</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="623.956.102-91">623.956.102-91</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="663.835.872-34">663.835.872-34</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="671.600.624.20">671.600.624.20</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="695.189.802-25">695.189.802-25</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="706.133.971-34">706.133.971-34</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="706.439.112-00">706.439.112-00</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="707.828.813-00">707.828.813-00</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="719.564.412-04">719.564.412-04</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="726.462.502-82">726.462.502-82</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="742.718.902-78">742.718.902-78</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="757.625.792-04">757.625.792-04</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="770.233.003-68">770.233.003-68</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="799.786.492-04">799.786.492-04</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="815.331.442-49">815.331.442-49</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="947.955.842-49">947.955.842-49</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="968.368.814-49">968.368.814-49</option>';
+            TabeladeAtributos01_CPF_options_str  += '<option value="989.228.402-00">989.228.402-00</option>';
+            sel_TabeladeAtributos01_CPF.innerHTML = TabeladeAtributos01_CPF_options_str;
+            div_TabeladeAtributos01_CPF.appendChild(sel_TabeladeAtributos01_CPF);
+            var lab_TabeladeAtributos01_CPF = document.createElement('div');
+            lab_TabeladeAtributos01_CPF.innerHTML = 'Tabela de Atributos 01_CPF';
+            lab_TabeladeAtributos01_CPF.className = 'filterlabel';
+            div_TabeladeAtributos01_CPF.appendChild(lab_TabeladeAtributos01_CPF);
+            var reset_TabeladeAtributos01_CPF = document.createElement('div');
+            reset_TabeladeAtributos01_CPF.innerHTML = 'clear filter';
+            reset_TabeladeAtributos01_CPF.className = 'filterlabel';
+            reset_TabeladeAtributos01_CPF.onclick = function() {
+                var options = document.getElementById("sel_TabeladeAtributos01_CPF").options;
+                for (var i=0; i < options.length; i++) {
+                    options[i].selected = false;
+                }
+                filterFunc();
+            };
+            div_TabeladeAtributos01_CPF.appendChild(reset_TabeladeAtributos01_CPF);
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_ENDEREO = document.createElement('div');
+            div_ENDEREO.id = "div_ENDEREO";
+            div_ENDEREO.className= "filterselect";
+            document.getElementById("menu").appendChild(div_ENDEREO);
+            sel_ENDEREO = document.createElement('select');
+            sel_ENDEREO.multiple = true;
+            sel_ENDEREO.size = 2;
+            sel_ENDEREO.id = "sel_ENDEREO";
+            var ENDEREO_options_str = "<option value='' unselected></option>";
+            sel_ENDEREO.onchange = function(){filterFunc()};
+            ENDEREO_options_str  += '<option value="NULL">NULL</option>';
+            ENDEREO_options_str  += '<option value="AVENIDA MARIO HOMEM DE MELO">AVENIDA MARIO HOMEM DE MELO</option>';
+            sel_ENDEREO.innerHTML = ENDEREO_options_str;
+            div_ENDEREO.appendChild(sel_ENDEREO);
+            var lab_ENDEREO = document.createElement('div');
+            lab_ENDEREO.innerHTML = 'ENDEREÇO';
+            lab_ENDEREO.className = 'filterlabel';
+            div_ENDEREO.appendChild(lab_ENDEREO);
+            var reset_ENDEREO = document.createElement('div');
+            reset_ENDEREO.innerHTML = 'clear filter';
+            reset_ENDEREO.className = 'filterlabel';
+            reset_ENDEREO.onclick = function() {
+                var options = document.getElementById("sel_ENDEREO").options;
+                for (var i=0; i < options.length; i++) {
+                    options[i].selected = false;
+                }
+                filterFunc();
+            };
+            div_ENDEREO.appendChild(reset_ENDEREO);
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_Nome = document.createElement('div');
+            div_Nome.id = "div_Nome";
+            div_Nome.className= "filterselect";
+            document.getElementById("menu").appendChild(div_Nome);
+            sel_Nome = document.createElement('select');
+            sel_Nome.multiple = true;
+            sel_Nome.size = 1;
+            sel_Nome.id = "sel_Nome";
+            var Nome_options_str = "<option value='' unselected></option>";
+            sel_Nome.onchange = function(){filterFunc()};
+            Nome_options_str  += '<option value="GLEBA CAUAMÉ - MATRÍCULA 43725">GLEBA CAUAMÉ - MATRÍCULA 43725</option>';
+            sel_Nome.innerHTML = Nome_options_str;
+            div_Nome.appendChild(sel_Nome);
+            var lab_Nome = document.createElement('div');
+            lab_Nome.innerHTML = 'Nome';
+            lab_Nome.className = 'filterlabel';
+            div_Nome.appendChild(lab_Nome);
+            var reset_Nome = document.createElement('div');
+            reset_Nome.innerHTML = 'clear filter';
+            reset_Nome.className = 'filterlabel';
+            reset_Nome.onclick = function() {
+                var options = document.getElementById("sel_Nome").options;
+                for (var i=0; i < options.length; i++) {
+                    options[i].selected = false;
+                }
+                filterFunc();
+            };
+            div_Nome.appendChild(reset_Nome);
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_TabeladeAtributos01_NOME = document.createElement('div');
+            div_TabeladeAtributos01_NOME.id = "div_TabeladeAtributos01_NOME";
+            div_TabeladeAtributos01_NOME.className= "filterselect";
+            document.getElementById("menu").appendChild(div_TabeladeAtributos01_NOME);
+            sel_TabeladeAtributos01_NOME = document.createElement('select');
+            sel_TabeladeAtributos01_NOME.multiple = true;
+            sel_TabeladeAtributos01_NOME.size = 10;
+            sel_TabeladeAtributos01_NOME.id = "sel_TabeladeAtributos01_NOME";
+            var TabeladeAtributos01_NOME_options_str = "<option value='' unselected></option>";
+            sel_TabeladeAtributos01_NOME.onchange = function(){filterFunc()};
+            TabeladeAtributos01_NOME_options_str  += '<option value="ANDYARA ALVES LIMA BIZARRIAS">ANDYARA ALVES LIMA BIZARRIAS</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="ANTONIO PAULO DE SOUSA CASTRO">ANTONIO PAULO DE SOUSA CASTRO</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="BENEDITA DOS SANTOS FIGUEIREDO">BENEDITA DOS SANTOS FIGUEIREDO</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="CARLA BRIENNE LEITE">CARLA BRIENNE LEITE</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="CLAUDIANE ALVES DE SOUSA">CLAUDIANE ALVES DE SOUSA</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="CLEUSIANE ALVES RIBEIRO">CLEUSIANE ALVES RIBEIRO</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="DARLENE TEREZA TORREIA NUNES">DARLENE TEREZA TORREIA NUNES</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="DEBORA DA PENHA SOUSA">DEBORA DA PENHA SOUSA</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="EDER TORREIA PEREIRA">EDER TORREIA PEREIRA</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="EDILSON SOUTO DA SILVA">EDILSON SOUTO DA SILVA</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="ELIAN FERREIRA DE ALENCAR SILVA">ELIAN FERREIRA DE ALENCAR SILVA</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="ELIANE INACIO DE LIMA">ELIANE INACIO DE LIMA</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="ERONDINA MARIA LE�O PERES">ERONDINA MARIA LE�O PERES</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="EULINO FERREIRA DE SOUSA">EULINO FERREIRA DE SOUSA</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="EURIVAN GUERRA">EURIVAN GUERRA</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="FRANCISCA MERC�">FRANCISCA MERC�</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="FRANCISCO FRANCIELE BELCHIOR">FRANCISCO FRANCIELE BELCHIOR</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="FRANCISCO IDELMOND DE ALBUQUERQUE">FRANCISCO IDELMOND DE ALBUQUERQUE</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="FRANCISCO XAVIER DE SOUZA ATAIDE">FRANCISCO XAVIER DE SOUZA ATAIDE</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="GILDETE GELDENICE HOLANDA RAMALHO">GILDETE GELDENICE HOLANDA RAMALHO</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="GILMAR RODRIGUES BARRETO">GILMAR RODRIGUES BARRETO</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="GLEYSON LUIZ DUTRA DE ARAUJO">GLEYSON LUIZ DUTRA DE ARAUJO</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="HILDENE DOS SANTOS MACHADO">HILDENE DOS SANTOS MACHADO</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="JANAINA ALVES DE OLIVEIRA">JANAINA ALVES DE OLIVEIRA</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="JESUS MARTINS DA SILVA">JESUS MARTINS DA SILVA</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="JOAO ALVES PEREIRA">JOAO ALVES PEREIRA</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="JOSE DA COSTA PADILHA JUNIOR">JOSE DA COSTA PADILHA JUNIOR</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="JOSE DIERSON VIEIRA MACIEL">JOSE DIERSON VIEIRA MACIEL</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="JOSE FRANCISCO LIMA">JOSE FRANCISCO LIMA</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="JOSE OSMI CIDRAO VARELO">JOSE OSMI CIDRAO VARELO</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="JOSE SILVA DOS SANTOS">JOSE SILVA DOS SANTOS</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="JOSE WILSON SOUTO DA SILVA">JOSE WILSON SOUTO DA SILVA</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="LUCIA GALDINO DE LIMA">LUCIA GALDINO DE LIMA</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="LUCINEIA CARLOS MEDEIROS">LUCINEIA CARLOS MEDEIROS</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="LUIS COSTA MACIEL">LUIS COSTA MACIEL</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="LUZARINA OLIVEIRA DOS SANTOS">LUZARINA OLIVEIRA DOS SANTOS</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="MARIA DA GLORIA MAGALHAES BARRETO">MARIA DA GLORIA MAGALHAES BARRETO</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="MARIA DE FATIMA MATOS DE ALMEIDA">MARIA DE FATIMA MATOS DE ALMEIDA</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="MARIA ELIAS ARAUJO">MARIA ELIAS ARAUJO</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="MARIA TERESA DOS PASSOS SILVA">MARIA TERESA DOS PASSOS SILVA</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="MARILENE MARTINS DE FIGUEIREDO">MARILENE MARTINS DE FIGUEIREDO</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="MARINELZA VIEIRA COSTA">MARINELZA VIEIRA COSTA</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="MARLENE ANDRADE DE SOUSA">MARLENE ANDRADE DE SOUSA</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="MARLIZ COSTA BARNAB�">MARLIZ COSTA BARNAB�</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="MERINALVA ANDRADE DOS REIS">MERINALVA ANDRADE DOS REIS</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="MIRIAM COLARES MESQUITA">MIRIAM COLARES MESQUITA</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="MIRIAN VIEIRA COSTA">MIRIAN VIEIRA COSTA</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="MIRNA ROMANA ROMEIRO">MIRNA ROMANA ROMEIRO</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="NARA BARBOSA TAVORA">NARA BARBOSA TAVORA</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="NEUMAR LEVEL SILVA">NEUMAR LEVEL SILVA</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="NINA ROSA PESTANA DA SILVA">NINA ROSA PESTANA DA SILVA</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="NORMA LUCIA CANTANHEDE DE SOUZA">NORMA LUCIA CANTANHEDE DE SOUZA</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="RAQUEL D&apos; OLIVEIRA SANTOS">RAQUEL D&apos; OLIVEIRA SANTOS</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="REJANE MESSIAS OLIVEIRA DE CARVALHO">REJANE MESSIAS OLIVEIRA DE CARVALHO</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="ROZILENE DE ALMEIDA PEREIRA">ROZILENE DE ALMEIDA PEREIRA</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="SILVIA ELENA AMERICO VALENTIM">SILVIA ELENA AMERICO VALENTIM</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="SORAIA RIBEIRO DA SILVA">SORAIA RIBEIRO DA SILVA</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="VANGELA MARIA MACHADO VIDAL">VANGELA MARIA MACHADO VIDAL</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="VANJA SORAIA DA SILVA">VANJA SORAIA DA SILVA</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="VEREDIANO CAVALCANTE MOREIRA">VEREDIANO CAVALCANTE MOREIRA</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="WALDIR GALV�O FERREIRA">WALDIR GALV�O FERREIRA</option>';
+            TabeladeAtributos01_NOME_options_str  += '<option value="WESLEY FERREIRA SANTOS">WESLEY FERREIRA SANTOS</option>';
+            sel_TabeladeAtributos01_NOME.innerHTML = TabeladeAtributos01_NOME_options_str;
+            div_TabeladeAtributos01_NOME.appendChild(sel_TabeladeAtributos01_NOME);
+            var lab_TabeladeAtributos01_NOME = document.createElement('div');
+            lab_TabeladeAtributos01_NOME.innerHTML = 'Tabela de Atributos 01_NOME';
+            lab_TabeladeAtributos01_NOME.className = 'filterlabel';
+            div_TabeladeAtributos01_NOME.appendChild(lab_TabeladeAtributos01_NOME);
+            var reset_TabeladeAtributos01_NOME = document.createElement('div');
+            reset_TabeladeAtributos01_NOME.innerHTML = 'clear filter';
+            reset_TabeladeAtributos01_NOME.className = 'filterlabel';
+            reset_TabeladeAtributos01_NOME.onclick = function() {
+                var options = document.getElementById("sel_TabeladeAtributos01_NOME").options;
+                for (var i=0; i < options.length; i++) {
+                    options[i].selected = false;
+                }
+                filterFunc();
+            };
+            div_TabeladeAtributos01_NOME.appendChild(reset_TabeladeAtributos01_NOME);
+        resetLabels([layer_GlebaCauam_3,layer_readeRenncia_4]);
+        map.on("zoomend", function(){
+            resetLabels([layer_GlebaCauam_3,layer_readeRenncia_4]);
+        });
+        map.on("layeradd", function(){
+            resetLabels([layer_GlebaCauam_3,layer_readeRenncia_4]);
+        });
+        map.on("layerremove", function(){
+            resetLabels([layer_GlebaCauam_3,layer_readeRenncia_4]);
+        });
+        </script>        
+    </body>
+</html>
